@@ -1,0 +1,49 @@
+{"permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./**/.env)",
+      "WebFetch",
+      "WebSearch"
+    ],
+    "allow": [
+      "Bash(uv run python -m verification *)"
+    ]
+  },
+   "sandbox": {
+    "enabled": true,
+    "allowUnsandboxedCommands": false,
+    "filesystem": {
+      "denyRead": [".env"]
+    }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Edit|Write|Bash",
+        "hooks": [
+          { "type":  "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/proteger_env.py\""}
+        ]
+      }
+    ],
+    "PostToolUse": [
+  {
+    "matcher": "Edit|Write",
+    "hooks": [
+      {
+        "type": "command",
+        "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/verificar_python.py\"",
+        "timeout": 30
+      }
+    ]
+  }
+],
+    "Stop": [
+      {
+        "hooks":[
+          { "type":"command", "command": "afplay /System/Library/Sounds/Glass.aiff" }
+      ]
+      }
+    ]
+  }
+
+}

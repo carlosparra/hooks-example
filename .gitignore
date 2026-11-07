@@ -1,0 +1,32 @@
+# Secretos / variables de entorno
+.env
+.env.*
+!.env.example
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# IDEs / asistentes
+.idea/
+.junie/
+.vscode/
+
+# Claude Code (configuración local personal)
+.claude/settings.local.json
+
+# macOS
+.DS_Store
