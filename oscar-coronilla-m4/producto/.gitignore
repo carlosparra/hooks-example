@@ -1,0 +1,19 @@
+# Secretos locales: nunca se versionan (.env.example sí, porque no tiene valores)
+.env
+
+# Entornos virtuales
+.venv/
+venv/
+
+# Cachés de Python y de las herramientas
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Cobertura
+.coverage
+.coverage.*
+htmlcov/

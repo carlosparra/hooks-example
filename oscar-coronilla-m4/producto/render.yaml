@@ -1,0 +1,40 @@
+# Blueprint de Render del HR Assistant (spec/04-production.md, punto 7).
+# El servicio se llama igual que el repositorio, para no actualizar por error un
+# servicio que ya exista en la cuenta con otro nombre.
+services:
+  - type: web
+    name: hr-assistant-oscar
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    # Render publica solo cuando el pipeline de CI de GitHub pasa
+    autoDeployTrigger: checksPass
+    envVars:
+      # Con production se aplican las reglas de compliance al arrancar
+      - key: ENVIRONMENT
+        value: production
+      - key: MODEL_PROVIDER
+        value: gateway
+      # No mandar preguntas ni respuestas a LangSmith
+      - key: HIDE_INPUTS
+        value: "true"
+      - key: HIDE_OUTPUTS
+        value: "true"
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "30"
+      # Secretos: se escriben en Render al crear el Blueprint, nunca en el repositorio.
+      # LANGSMITH_API_KEY es opcional y no va aquí: se agrega en Render > Environment
+      # solo si se encienden las trazas.
+      # CF_GATEWAY_ID también se pide en Render: el gateway exige autenticación.
+      - key: CF_GATEWAY_ID
+        sync: false
+      - key: API_KEYS
+        sync: false
+      - key: CF_ACCOUNT_ID
+        sync: false
+      - key: CF_API_TOKEN
+        sync: false
+      - key: CF_AIG_TOKEN
+        sync: false

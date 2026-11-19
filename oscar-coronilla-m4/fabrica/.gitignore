@@ -1,0 +1,13 @@
+# Lo que generan los agentes en cada corrida
+product/
+output/
+
+# Entornos y secretos
+.venv/
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store

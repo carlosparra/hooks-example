@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HR Assistant</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 720px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #222;
+    }
+    h1 { font-size: 1.5rem; }
+    #conversation {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 1rem;
+      min-height: 200px;
+      margin-bottom: 1rem;
+    }
+    .message { margin: 0.5rem 0; padding: 0.5rem; border-radius: 4px; }
+    .user { background: #eef4ff; }
+    .assistant { background: #f3f3f3; }
+    .tools { font-size: 0.85rem; color: #555; margin-top: 0.25rem; }
+    .error { background: #fde8e8; color: #8a1c1c; }
+    form { display: flex; gap: 0.5rem; }
+    input { flex: 1; padding: 0.5rem; }
+    button { padding: 0.5rem 1rem; }
+    .key-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>HR Assistant</h1>
+  <div class="key-row">
+    <label for="api-key">Clave de acceso</label>
+    <input id="api-key" data-testid="api-key" type="password"
+           autocomplete="off" spellcheck="false" placeholder="Escribe tu clave">
+  </div>
+  <div id="conversation" data-testid="answer" aria-live="polite"></div>
+  <form id="ask-form">
+    <input id="question" data-testid="question" type="text"
+           placeholder="Pregunta por un empleado o un departamento" maxlength="2000">
+    <button id="send" data-testid="send" type="submit">Enviar</button>
+  </form>
+  <script>
+    // El historial vive solo en la memoria del navegador.
+    const chatHistory = [];
+    const conversation = document.getElementById("conversation");
+    const form = document.getElementById("ask-form");
+    const input = document.getElementById("question");
+    const button = document.getElementById("send");
+    const keyInput = document.getElementById("api-key");
+    // La clave solo vive en sessionStorage: se borra al cerrar la pestaña.
+    const KEY_STORAGE_NAME = "hr-assistant-api-key";
+    const DEFAULT_RETRY_SECONDS = 60;
+
+    keyInput.value = sessionStorage.getItem(KEY_STORAGE_NAME) || "";
+    keyInput.addEventListener("input", () => {
+      sessionStorage.setItem(KEY_STORAGE_NAME, keyInput.value.trim());
+    });
+
+    // Arma los encabezados de la petición con la clave, si hay una.
+    function requestHeaders() {
+      const headers = { "Content-Type": "application/json" };
+      const apiKey = keyInput.value.trim();
+      sessionStorage.setItem(KEY_STORAGE_NAME, apiKey);
+      if (apiKey) {
+        headers["X-API-Key"] = apiKey;
+      }
+      return headers;
+    }
+
+    // Prefijo del 422 por datos sensibles; el 422 de validación trae una lista.
+    const SENSITIVE_DATA_PREFIX = "sensitive data detected";
+    const SENSITIVE_DATA_MESSAGE =
+      "Tu pregunta contiene datos sensibles; elimínalos y vuelve a intentar";
+
+    // Indica si un 422 se debe a datos sensibles (detail de texto con el prefijo).
+    async function isSensitiveData(response) {
+      try {
+        const body = await response.json();
+        return typeof body.detail === "string" &&
+          body.detail.startsWith(SENSITIVE_DATA_PREFIX);
+      } catch (error) {
+        return false;
+      }
+    }
+
+    // Traduce un código de error a un mensaje en español.
+    async function errorMessage(response) {
+      if (response.status === 401) {
+        return "Clave inválida";
+      }
+      if (response.status === 429) {
+        const wait = parseInt(response.headers.get("Retry-After"), 10);
+        const seconds = wait > 0 ? wait : DEFAULT_RETRY_SECONDS;
+        return "Demasiadas preguntas; espera " + seconds + " segundos";
+      }
+      if (response.status === 422) {
+        if (await isSensitiveData(response)) {
+          return SENSITIVE_DATA_MESSAGE;
+        }
+        return "La pregunta no es válida (vacía o demasiado larga).";
+      }
+      return "El servidor respondió con un error. Intenta de nuevo.";
+    }
+
+    // Agrega un mensaje a la conversación usando solo textContent.
+    // requestId es el request_id que la persona puede pasar a soporte.
+    function addMessage(kind, text, tools, requestId) {
+      const box = document.createElement("div");
+      box.className = "message " + kind;
+      const body = document.createElement("div");
+      body.textContent = text;
+      box.appendChild(body);
+      if (tools !== undefined) {
+        const toolsLine = document.createElement("div");
+        toolsLine.className = "tools";
+        toolsLine.textContent = "Herramientas usadas: " +
+          (tools.length ? tools.join(", ") : "ninguna");
+        box.appendChild(toolsLine);
+      }
+      if (requestId) {
+        const idLine = document.createElement("div");
+        idLine.className = "tools request-id";
+        idLine.textContent = "request_id: " + requestId;
+        box.appendChild(idLine);
+      }
+      conversation.appendChild(box);
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const question = input.value.trim();
+      if (!question) {
+        addMessage("error", "Escribe una pregunta antes de enviar.");
+        return;
+      }
+      addMessage("user", question);
+      button.disabled = true;
+      try {
+        const response = await fetch("/ask", {
+          method: "POST",
+          headers: requestHeaders(),
+          body: JSON.stringify({ question: question, history: chatHistory }),
+        });
+        if (!response.ok) {
+          addMessage("error", await errorMessage(response), undefined,
+            response.headers.get("X-Request-ID"));
+          return;
+        }
+        const data = await response.json();
+        addMessage("assistant", data.answer, data.tools_used || [],
+          data.request_id || response.headers.get("X-Request-ID"));
+        chatHistory.push({ role: "user", content: question });
+        chatHistory.push({ role: "assistant", content: data.answer });
+        input.value = "";
+      } catch (error) {
+        addMessage("error", "No se pudo conectar con el servidor.");
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

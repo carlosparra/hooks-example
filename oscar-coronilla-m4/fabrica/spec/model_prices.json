@@ -1,0 +1,11 @@
+{
+    "currency": "USD",
+    "unit": "per million tokens",
+    "source": "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+    "checked": "2026-11-04 (verify before class: prices change)",
+    "models": {
+        "fake": {"input": 0.0, "output": 0.0},
+        "@cf/meta/llama-3.1-8b-instruct-fast": {"input": 0.045, "output": 0.384},
+        "@cf/meta/llama-3.3-70b-instruct-fp8-fast": {"input": 0.293, "output": 2.253}
+    }
+}

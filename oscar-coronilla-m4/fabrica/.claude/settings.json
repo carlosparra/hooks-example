@@ -1,0 +1,48 @@
+{
+    "permissions": {
+        "deny": [
+            "Read(./.env)",
+            "Read(./**/.env)",
+            "WebFetch",
+            "WebSearch"
+        ],
+        "allow": [
+            "Bash(uv run python -m verification *)",
+            "Bash(uv run python scripts/pipeline.py)",
+            "Bash(uv run python scripts/publish.py *)"
+        ]
+    },
+    "hooks": {
+        "PreToolUse": [
+            {
+                "matcher": "Write|Edit|MultiEdit|NotebookEdit|Read|Grep|Bash|PowerShell",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "uv run python \"$CLAUDE_PROJECT_DIR/hooks/permissions.py\""
+                    }
+                ]
+            }
+        ],
+        "PostToolUse": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "uv run python \"$CLAUDE_PROJECT_DIR/hooks/activity_log.py\""
+                    }
+                ]
+            }
+        ],
+        "PostToolUseFailure": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "uv run python \"$CLAUDE_PROJECT_DIR/hooks/activity_log.py\""
+                    }
+                ]
+            }
+        ]
+    }
+}

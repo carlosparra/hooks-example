@@ -1,0 +1,42 @@
+[
+  {
+    "id": "EMP-0001",
+    "name": "Ana López",
+    "department": "Tecnología",
+    "role": "Analista de datos",
+    "start_date": "2019-03-04",
+    "status": "activo"
+  },
+  {
+    "id": "EMP-0002",
+    "name": "Luis Pérez",
+    "department": "Ventas",
+    "role": "Ejecutivo de cuenta",
+    "start_date": "2021-07-19",
+    "status": "activo"
+  },
+  {
+    "id": "EMP-0003",
+    "name": "Marta Ruiz",
+    "department": "Tecnología",
+    "role": "Desarrolladora",
+    "start_date": "2016-11-02",
+    "status": "baja"
+  },
+  {
+    "id": "EMP-0004",
+    "name": "Jorge Díaz",
+    "department": "Tecnología",
+    "role": "Líder técnico",
+    "start_date": "2022-01-10",
+    "status": "activo"
+  },
+  {
+    "id": "EMP-0005",
+    "name": "Sofía Gómez",
+    "department": "Finanzas",
+    "role": "Contadora",
+    "start_date": "2020-05-25",
+    "status": "activo"
+  }
+]

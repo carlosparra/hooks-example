@@ -1,0 +1,100 @@
+# Pipeline de CI del HR Assistant (spec/04-production.md, punto 6).
+# Cuatro trabajos encadenados con needs: cada etapa se ve por separado en la
+# pestaña Actions y Render publica solo si todas pasan (autoDeployTrigger: checksPass).
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# El pipeline solo lee el código; no necesita más permisos
+permissions:
+  contents: read
+
+jobs:
+  style:
+    name: style (pylint, 88 columnas)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+      # Mismas opciones que verification/qa.py: el CI y la verificación local
+      # deben medir lo mismo. Si cambian allí, hay que cambiarlas aquí.
+      - name: pylint
+        run: >-
+          python -m pylint app tests --max-line-length=88
+          --fail-under=10
+          --disable=missing-function-docstring,redefined-outer-name,too-few-public-methods
+
+  unit:
+    name: unit (pruebas y BDD, cobertura >= 80 %)
+    needs: style
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+      - name: Pruebas con cobertura
+        run: python -m pytest tests -q --cov=app --cov-fail-under=80
+
+  e2e:
+    name: e2e (Playwright con el modelo simulado)
+    needs: unit
+    runs-on: ubuntu-latest
+    env:
+      # Clave de prueba de ejemplo: no es un secreto, solo existe en esta corrida.
+      # El producto la acepta (API_KEYS) y las pruebas la escriben en la página (E2E_API_KEY).
+      CI_TEST_KEY: ci-example-key-0123456789
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+      - name: Instalar Chromium
+        run: python -m playwright install --with-deps chromium
+      - name: Arrancar el producto
+        env:
+          MODEL_PROVIDER: fake
+          API_KEYS: ci:${{ env.CI_TEST_KEY }}
+          RATE_LIMIT_PER_MINUTE: "1000"
+        run: |
+          nohup python -m uvicorn app.main:app --port 8000 --no-access-log \
+            > uvicorn.log 2>&1 &
+          # Espera hasta 30 segundos a que /health responda
+          for _ in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:8000/health > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "El producto no arrancó"
+          cat uvicorn.log
+          exit 1
+      - name: Pruebas de Playwright
+        env:
+          E2E_API_KEY: ${{ env.CI_TEST_KEY }}
+        run: python -m pytest e2e -q --base-url http://127.0.0.1:8000
+      - name: Log del producto si algo falla
+        if: failure()
+        run: cat uvicorn.log
+
+  docker:
+    name: docker (build de la imagen)
+    needs: e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: docker build
+        run: docker build --tag hr-assistant-oscar:${{ github.sha }} .

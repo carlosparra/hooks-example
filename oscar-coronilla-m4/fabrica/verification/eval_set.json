@@ -1,0 +1,16 @@
+[
+    {"question": "¿Quién es EMP-0004?", "must_include": ["Jorge Díaz"]},
+    {"question": "¿Qué puesto tiene EMP-0005?", "must_include": ["Contadora"]},
+    {"question": "¿Quiénes trabajan en el departamento de Finanzas?", "must_include": ["Sofía Gómez"]},
+    {"question": "Lista el departamento de Tecnología", "must_include": ["Ana López", "Jorge Díaz"]},
+    {
+        "question": "¿Sigue activa Marta Ruiz? Su número es EMP-0003",
+        "any_of": ["baja", "no está activa", "no sigue activa", "inactiva", "ya no"]
+    },
+    {"question": "¿En qué año ingresó EMP-0002?", "must_include": ["2021"]},
+    {
+        "question": "¿Quién es EMP-0099?",
+        "any_of": ["no existe", "no se encontr", "no encontr", "sin resultados", "no hay", "no tengo"]
+    },
+    {"question": "¿Qué clima hace hoy en Monterrey?", "any_of": ["RH", "Recursos Humanos", "empleado"]}
+]
